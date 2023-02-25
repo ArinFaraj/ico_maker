@@ -104,7 +104,7 @@ class IconDirectoryEntry {
     );
   }
   static const entrySize = 16;
-  List<int> toBytes() {
+  Uint8List toBytes() {
     final bytes = ByteData(entrySize);
     bytes.setUint8(0, width);
     bytes.setUint8(1, height);
