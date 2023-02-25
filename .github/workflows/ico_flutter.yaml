@@ -1,0 +1,23 @@
+name: ico_flutter
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    paths:
+      - "packages/ico_flutter/**"
+      - ".github/workflows/ico_flutter.yaml"
+
+  pull_request:
+    paths:
+      - "packages/ico_flutter/**"
+      - ".github/workflows/ico_flutter.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      flutter_channel: stable
+      working_directory: "packages/ico_flutter"

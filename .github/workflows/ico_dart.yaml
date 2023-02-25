@@ -1,0 +1,22 @@
+name: ico_dart
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    paths:
+      - "packages/ico_dart/**"
+      - ".github/workflows/ico_dart.yaml"
+
+  pull_request:
+    paths:
+      - "packages/ico_dart/**"
+      - ".github/workflows/ico_dart.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    with:
+      working_directory: "packages/ico_dart"
