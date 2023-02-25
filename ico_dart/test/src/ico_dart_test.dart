@@ -1,4 +1,5 @@
 // ignore_for_file: prefer_const_constructors
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:ico_dart/ico_dart.dart';
@@ -27,15 +28,10 @@ void main() {
       // Save the file back to the disk
       final newBytes = file.toBytes();
       File('test/assets/icon2.ico').writeAsBytesSync(newBytes);
-      print('newBytes: ${newBytes.length}, oldBytes: ${bytes.length}');
+      log('newBytes: ${newBytes.length}, oldBytes: ${bytes.length}');
       for (var i = 0; i < bytes.length; i++) {
         expect(bytes[i], newBytes[i], reason: 'byte $i is different');
       }
-//       assert(
-//         bytes.length == newBytes.length,
-//         '''
-// The length of the two files are different ${bytes.length} != ${newBytes.length}''',
-//       );
     });
   });
 }
