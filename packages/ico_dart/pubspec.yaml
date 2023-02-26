@@ -1,5 +1,5 @@
 name: ico_dart
-description: A Very Good Project created by Very Good CLI.
+description: A library for interacting with the ICO Files.
 version: 0.1.0+1
 publish_to: none
 
