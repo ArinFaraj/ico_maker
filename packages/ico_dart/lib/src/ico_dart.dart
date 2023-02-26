@@ -1,5 +1,5 @@
 /// {@template ico_dart}
-/// A Very Good Project created by Very Good CLI.
+/// IcoDart is a library for parsing ICO files.
 /// {@endtemplate}
 class IcoDart {
   /// {@macro ico_dart}
