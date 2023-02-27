@@ -3,7 +3,7 @@ import 'dart:typed_data';
 /// A class for parsing ICO files.
 class IcoFile {
   /// IcoFile is a class for parsing ICO files.
-  IcoFile({required this.header, required this.directoryEntries});
+  IcoFile._({required this.header, required this.directoryEntries});
 
   /// Creates an [IcoFile] from a [Uint8List].
   factory IcoFile.fromBytes(Uint8List bytes) {
@@ -12,13 +12,13 @@ class IcoFile {
     final directoryEntries = <IconDirectoryEntry>[];
     var offset = IcoHeader.headerSize;
 
-    for (var i = 0; i < header.numImages; i++) {
+    for (var i = 0; i < header.imageCount; i++) {
       final directoryEntry = IconDirectoryEntry.fromBytes(data, offset);
       directoryEntries.add(directoryEntry);
       offset += IconDirectoryEntry.entrySize;
     }
 
-    return IcoFile(header: header, directoryEntries: directoryEntries);
+    return IcoFile._(header: header, directoryEntries: directoryEntries);
   }
 
   /// Creates a [Uint8List] from an [IcoFile].
@@ -50,7 +50,7 @@ class IcoHeader {
   IcoHeader({
     required this.reserved,
     required this.imageType,
-    required this.numImages,
+    required this.imageCount,
   });
 
   /// Creates an [IcoHeader] from a [ByteData].
@@ -62,7 +62,7 @@ class IcoHeader {
     return IcoHeader(
       reserved: reserved,
       imageType: imageType,
-      numImages: numImages,
+      imageCount: numImages,
     );
   }
 
@@ -74,7 +74,7 @@ class IcoHeader {
     final bytes = ByteData(headerSize)
       ..setUint16(0, reserved, Endian.little)
       ..setUint16(2, imageType, Endian.little)
-      ..setUint16(4, numImages, Endian.little);
+      ..setUint16(4, imageCount, Endian.little);
     return bytes.buffer.asUint8List();
   }
 
@@ -85,7 +85,7 @@ class IcoHeader {
   final int imageType;
 
   /// number of images in the file
-  final int numImages;
+  final int imageCount;
 }
 
 /// An icon directory entry.

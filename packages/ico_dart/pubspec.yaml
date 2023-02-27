@@ -1,5 +1,5 @@
 name: ico_dart
-description: A library for interacting with the ICO Files.
+description: Create, read, and write ICO files with toBytes() and fromBytes() methods.
 version: 0.1.0+1
 repository: https://github.com/ArinFaraj/ico_maker/tree/main/packages/ico_dart
 issue_tracker: https://github.com/ArinFaraj/ico_maker/issues
@@ -15,5 +15,5 @@ dev_dependencies:
   very_good_analysis: ^4.0.0
 
 screenshots:
-  - description: The bloc package logo.
+  - description: The ico_dart package logo.
     path: screenshots/logo.png

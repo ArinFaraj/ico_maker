@@ -3,15 +3,10 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:ico_dart/ico_dart.dart';
-import 'package:ico_dart/src/model/ico.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('IcoDart', () {
-    test('can be instantiated', () {
-      expect(IcoDart(), isNotNull);
-    });
-
     test('read icon file from bytes', () {
       // Read the file from the disk
       final bytes = File('test/assets/icon.ico').readAsBytesSync();
