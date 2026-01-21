@@ -149,7 +149,7 @@ class ImageUtils {
         result.setPixel(x1, y1, imgColor);
 
         // Draw thickness (simple approach for now)
-        for (int t = 1; t < thickness; t++) {
+        for (int t = 1; t <= thickness ~/ 2; t++) {
           if (dx > dy) {
             // More horizontal, add thickness vertically
             if (y1 + t < result.height) result.setPixel(x1, y1 + t, imgColor);
