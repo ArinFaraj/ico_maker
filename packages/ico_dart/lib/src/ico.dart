@@ -23,18 +23,39 @@ class IcoFile {
 
   /// Creates a [Uint8List] from an [IcoFile].
   Uint8List toBytes() {
-    final headerBytes = header.toBytes();
-    final directoryBytes = directoryEntries.fold(
-      <int>[],
-      (bytes, entry) => bytes..addAll(entry.toBytes()),
-    );
-    final imageBytes = directoryEntries.fold(
-      <int>[],
-      (bytes, entry) => bytes..addAll(entry.imageData),
-    );
-    return Uint8List.fromList(
-      [...headerBytes, ...directoryBytes, ...imageBytes],
-    );
+    var totalSize = IcoHeader.headerSize;
+    for (final entry in directoryEntries) {
+      totalSize += IconDirectoryEntry.entrySize + entry.imageData.length;
+    }
+
+    final bytes = Uint8List(totalSize);
+    final buffer = bytes.buffer.asByteData();
+
+    buffer.setUint16(0, header.reserved, Endian.little);
+    buffer.setUint16(2, header.imageType, Endian.little);
+    buffer.setUint16(4, header.imageCount, Endian.little);
+
+    var offset = IcoHeader.headerSize;
+
+    for (final entry in directoryEntries) {
+      buffer.setUint8(offset, entry.width);
+      buffer.setUint8(offset + 1, entry.height);
+      buffer.setUint8(offset + 2, entry.colorCount);
+      buffer.setUint8(offset + 3, entry.reserved);
+      buffer.setUint16(offset + 4, entry.numPlanes, Endian.little);
+      buffer.setUint16(offset + 6, entry.bitsPerPixel, Endian.little);
+      buffer.setUint32(offset + 8, entry.imageSize, Endian.little);
+      buffer.setUint32(offset + 12, entry.imageOffset, Endian.little);
+
+      offset += IconDirectoryEntry.entrySize;
+    }
+
+    for (final entry in directoryEntries) {
+      bytes.setRange(offset, offset + entry.imageData.length, entry.imageData);
+      offset += entry.imageData.length;
+    }
+
+    return bytes;
   }
 
   /// The header of the ICO file.
