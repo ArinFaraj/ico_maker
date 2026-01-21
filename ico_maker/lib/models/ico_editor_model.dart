@@ -136,31 +136,25 @@ class IcoEditorModel extends ChangeNotifier {
       }
 
       // 4. Write the ICO file bytes manually
+      final builder = BytesBuilder();
+
       // 4.1 Write header
-      final headerBytes = header.toBytes();
+      builder.add(header.toBytes());
 
       // 4.2 Write directory entries
-      final directoryBytes = <int>[];
       for (final entry in updatedEntries) {
-        directoryBytes.addAll(entry.toBytes());
+        builder.add(entry.toBytes());
       }
 
       // 4.3 Write image data
-      final imageBytes = <int>[];
       for (final entry in updatedEntries) {
-        imageBytes.addAll(entry.imageData);
+        builder.add(entry.imageData);
       }
-
-      // 5. Combine all bytes
-      final allBytes = <int>[];
-      allBytes.addAll(headerBytes);
-      allBytes.addAll(directoryBytes);
-      allBytes.addAll(imageBytes);
 
       _isDirty = false;
       notifyListeners();
 
-      return Uint8List.fromList(allBytes);
+      return builder.toBytes();
     } catch (e) {
       debugPrint('Error saving ICO file: $e');
       return null;
