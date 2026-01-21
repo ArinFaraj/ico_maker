@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:ico_dart/ico_dart.dart';
 import 'package:image/image.dart' as img;
 
-import '../utils/image_utils.dart';
 
 // Extension to add creation methods to IcoFile
 extension IcoFileExtension on IcoFile {
@@ -48,44 +47,9 @@ class IcoEditorModel extends ChangeNotifier {
       // Load the ICO file from bytes
       _icoFile = IcoFile.fromBytes(bytes);
 
-      // Normalize the entries to ensure they're consistent
-      if (_icoFile != null && _icoFile!.directoryEntries.isNotEmpty) {
-        final normalizedEntries = <IconDirectoryEntry>[];
-
-        for (final entry in _icoFile!.directoryEntries) {
-          // Try to decode the image data to make sure it's valid
-          final image = ImageUtils.bytesToImage(entry.imageData);
-
-          if (image != null) {
-            // Re-encode it to ensure it's properly formatted
-            final processedImage = _ensureAlphaChannel(image);
-            final processedBytes = img.encodePng(processedImage);
-
-            // Create a normalized entry with proper values
-            final normalizedEntry = IconDirectoryEntry(
-              width: entry.width,
-              height: entry.height,
-              colorCount: entry.colorCount,
-              reserved: entry.reserved,
-              numPlanes: entry.numPlanes,
-              bitsPerPixel: entry.bitsPerPixel,
-              imageSize: processedBytes.length,
-              imageOffset:
-                  entry.imageOffset, // Will be recalculated when saving
-              imageData: processedBytes,
-            );
-
-            normalizedEntries.add(normalizedEntry);
-          } else {
-            // If image can't be decoded, just use the original entry
-            normalizedEntries.add(entry);
-          }
-        }
-
-        // Clear existing entries and add the normalized ones
-        _icoFile!.directoryEntries.clear();
-        _icoFile!.directoryEntries.addAll(normalizedEntries);
-      }
+      // Optimization: We don't re-encode entries on load.
+      // This improves performance significantly for large files.
+      // Validity is checked when displaying or editing the entries.
 
       _selectedEntryIndex = _icoFile!.directoryEntries.isNotEmpty ? 0 : -1;
       _isDirty = false;
