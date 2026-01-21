@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -206,5 +208,27 @@ class ImageUtils {
     );
 
     return result;
+  }
+
+  // Convert image package Image to dart:ui Image
+  static Future<ui.Image?> convertToUiImage(img.Image image) async {
+    try {
+      final completer = Completer<ui.Image>();
+
+      ui.decodeImageFromPixels(
+        image.toUint8List(),
+        image.width,
+        image.height,
+        ui.PixelFormat.rgba8888,
+        (ui.Image img) {
+          completer.complete(img);
+        },
+      );
+
+      return completer.future;
+    } catch (e) {
+      debugPrint('Error converting to ui.Image: $e');
+      return null;
+    }
   }
 }

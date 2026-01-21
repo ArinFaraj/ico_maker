@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:ico_dart/ico_dart.dart';
@@ -46,6 +47,11 @@ class _IconEditorState extends State<IconEditor> {
   // Double buffer for drawing operations
   img.Image? _drawBuffer;
 
+  // Cached ui.Image for efficient rendering
+  ui.Image? _cachedUiImage;
+  int _cachedUiImageVersion = 0;
+  bool _isCachedUiImageValid = false;
+
   // Color history
   final List<Color> _recentColors = [
     Colors.black,
@@ -63,6 +69,12 @@ class _IconEditorState extends State<IconEditor> {
   }
 
   @override
+  void dispose() {
+    _cachedUiImage?.dispose();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(IconEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.entry != widget.entry) {
@@ -73,6 +85,12 @@ class _IconEditorState extends State<IconEditor> {
   void _loadImage() {
     _image = ImageUtils.bytesToImage(widget.entry.imageData);
     _drawBuffer = _image != null ? img.Image.from(_image!) : null;
+
+    // Invalidate cache and request update
+    _isCachedUiImageValid = false;
+    if (_drawBuffer != null) {
+      _updateCachedUiImage(_drawBuffer!);
+    }
     setState(() {});
   }
 
@@ -80,12 +98,29 @@ class _IconEditorState extends State<IconEditor> {
     setState(() {
       _image = newImage;
       _drawBuffer = img.Image.from(newImage);
+      _isCachedUiImageValid = false;
     });
+
+    _updateCachedUiImage(newImage);
 
     final pngBytes = ImageUtils.imageToPngBytes(newImage);
     if (pngBytes != null) {
       widget.onImageUpdated(pngBytes);
     }
+  }
+
+  void _updateCachedUiImage(img.Image image) {
+    _cachedUiImageVersion++;
+    final version = _cachedUiImageVersion;
+
+    ImageUtils.convertToUiImage(image).then((uiImage) {
+      if (mounted && version == _cachedUiImageVersion) {
+        setState(() {
+          _cachedUiImage = uiImage;
+          _isCachedUiImageValid = true;
+        });
+      }
+    });
   }
 
   void _addToRecentColors(Color color) {
@@ -148,6 +183,11 @@ class _IconEditorState extends State<IconEditor> {
         case EditorTool.filledRectangle:
           // Preview will be handled in the draw method
           break;
+      }
+
+      if (_drawBuffer != null) {
+        _isCachedUiImageValid = false;
+        _updateCachedUiImage(_drawBuffer!);
       }
     });
   }
@@ -329,7 +369,9 @@ class _IconEditorState extends State<IconEditor> {
 
     setState(() {
       _drawBuffer = updatedBuffer;
+      _isCachedUiImageValid = false;
     });
+    _updateCachedUiImage(updatedBuffer);
   }
 
   void _previewLine(int x1, int y1, int x2, int y2) {
@@ -351,7 +393,9 @@ class _IconEditorState extends State<IconEditor> {
 
     setState(() {
       _drawBuffer = updatedBuffer;
+      _isCachedUiImageValid = false;
     });
+    _updateCachedUiImage(updatedBuffer);
   }
 
   void _previewRectangle(int x1, int y1, int x2, int y2) {
@@ -379,7 +423,9 @@ class _IconEditorState extends State<IconEditor> {
 
     setState(() {
       _drawBuffer = updatedBuffer;
+      _isCachedUiImageValid = false;
     });
+    _updateCachedUiImage(updatedBuffer);
   }
 
   void _fill(int x, int y, Color targetColor) {
@@ -630,6 +676,7 @@ class _IconEditorState extends State<IconEditor> {
                       child: CustomPaint(
                         painter: ImagePainter(
                           image: _drawBuffer ?? _image!,
+                          uiImage: _isCachedUiImageValid ? _cachedUiImage : null,
                           zoom: widget.zoom,
                         ),
                         size: Size(
@@ -1034,25 +1081,55 @@ class GridPainter extends CustomPainter {
 
 class ImagePainter extends CustomPainter {
   final img.Image image;
+  final ui.Image? uiImage;
   final double zoom;
 
-  ImagePainter({required this.image, required this.zoom});
+  ImagePainter({
+    required this.image,
+    this.uiImage,
+    required this.zoom,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint();
 
-    for (int y = 0; y < image.height; y++) {
-      for (int x = 0; x < image.width; x++) {
-        final pixel = image.getPixel(x, y);
-        if (pixel.a > 0) {
-          paint.color = Color.fromARGB(
-            pixel.a.toInt(),
-            pixel.r.toInt(),
-            pixel.g.toInt(),
-            pixel.b.toInt(),
-          );
-          canvas.drawRect(Rect.fromLTWH(x * zoom, y * zoom, zoom, zoom), paint);
+    if (uiImage != null) {
+      // Use efficient drawing with dart:ui Image
+      paint.filterQuality = FilterQuality.none; // Keep pixelated look
+      canvas.drawImageRect(
+        uiImage!,
+        Rect.fromLTWH(
+          0,
+          0,
+          uiImage!.width.toDouble(),
+          uiImage!.height.toDouble(),
+        ),
+        Rect.fromLTWH(
+          0,
+          0,
+          uiImage!.width.toDouble() * zoom,
+          uiImage!.height.toDouble() * zoom,
+        ),
+        paint,
+      );
+    } else {
+      // Fallback to pixel-by-pixel drawing
+      for (int y = 0; y < image.height; y++) {
+        for (int x = 0; x < image.width; x++) {
+          final pixel = image.getPixel(x, y);
+          if (pixel.a > 0) {
+            paint.color = Color.fromARGB(
+              pixel.a.toInt(),
+              pixel.r.toInt(),
+              pixel.g.toInt(),
+              pixel.b.toInt(),
+            );
+            canvas.drawRect(
+              Rect.fromLTWH(x * zoom, y * zoom, zoom, zoom),
+              paint,
+            );
+          }
         }
       }
     }
@@ -1060,5 +1137,7 @@ class ImagePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(ImagePainter oldDelegate) =>
-      oldDelegate.image != image || oldDelegate.zoom != zoom;
+      oldDelegate.image != image ||
+      oldDelegate.uiImage != uiImage ||
+      oldDelegate.zoom != zoom;
 }
