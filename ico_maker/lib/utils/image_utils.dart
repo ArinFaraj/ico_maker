@@ -82,11 +82,14 @@ class ImageUtils {
     );
 
     if (filled) {
-      for (var py = y; py < y + height; py++) {
-        for (var px = x; px < x + width; px++) {
-          if (px >= 0 && px < result.width && py >= 0 && py < result.height) {
-            result.setPixel(px, py, imgColor);
-          }
+      int startY = y < 0 ? 0 : y;
+      int endY = y + height > result.height ? result.height : y + height;
+      int startX = x < 0 ? 0 : x;
+      int endX = x + width > result.width ? result.width : x + width;
+
+      for (var py = startY; py < endY; py++) {
+        for (var px = startX; px < endX; px++) {
+          result.setPixel(px, py, imgColor);
         }
       }
     } else {
