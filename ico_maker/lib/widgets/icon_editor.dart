@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -401,12 +402,12 @@ class _IconEditorState extends State<IconEditor> {
     final visited = <String>{};
 
     // Queue for flood fill
-    final queue = <MapEntry<int, int>>[];
+    final queue = Queue<MapEntry<int, int>>();
     queue.add(MapEntry(x, y));
 
     // Flood fill algorithm
     while (queue.isNotEmpty) {
-      final point = queue.removeAt(0);
+      final point = queue.removeFirst();
       final px = point.key;
       final py = point.value;
 
