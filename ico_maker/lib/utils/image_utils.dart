@@ -127,8 +127,9 @@ class ImageUtils {
     int y2,
     Color color, {
     int thickness = 1,
+    bool copy = true,
   }) {
-    final result = img.Image.from(image);
+    final result = copy ? img.Image.from(image) : image;
     final imgColor = img.ColorRgba8(
       color.red,
       color.green,
