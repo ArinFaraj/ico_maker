@@ -37,7 +37,10 @@ class MyApp extends StatelessWidget {
               ),
             ),
           ),
-          cardTheme: const CardTheme(elevation: 2, margin: EdgeInsets.all(8.0)),
+          cardTheme: const CardThemeData(
+            elevation: 2,
+            margin: EdgeInsets.all(8.0),
+          ),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
@@ -53,7 +56,10 @@ class MyApp extends StatelessWidget {
               ),
             ),
           ),
-          cardTheme: const CardTheme(elevation: 2, margin: EdgeInsets.all(8.0)),
+          cardTheme: const CardThemeData(
+            elevation: 2,
+            margin: EdgeInsets.all(8.0),
+          ),
         ),
         themeMode: ThemeMode.system,
         home: const HomeScreen(),

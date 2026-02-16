@@ -42,6 +42,7 @@ class _IconEditorState extends State<IconEditor> {
   bool _isDrawing = false;
   Offset? _lastPosition;
   Offset? _startPosition;
+  int _drawVersion = 0;
 
   // Double buffer for drawing operations
   img.Image? _drawBuffer;
@@ -80,6 +81,7 @@ class _IconEditorState extends State<IconEditor> {
     setState(() {
       _image = newImage;
       _drawBuffer = img.Image.from(newImage);
+      _drawVersion++;
     });
 
     final pngBytes = ImageUtils.imageToPngBytes(newImage);
@@ -239,6 +241,7 @@ class _IconEditorState extends State<IconEditor> {
             endY,
             _currentColor,
             thickness: _penSize,
+      copy: false,
           );
           _updateImage(newImage);
           break;
@@ -325,10 +328,12 @@ class _IconEditorState extends State<IconEditor> {
       y2,
       color,
       thickness: _penSize,
+      copy: false,
     );
 
     setState(() {
       _drawBuffer = updatedBuffer;
+      _drawVersion++;
     });
   }
 
@@ -347,10 +352,12 @@ class _IconEditorState extends State<IconEditor> {
       y2,
       _currentColor,
       thickness: _penSize,
+      copy: false,
     );
 
     setState(() {
       _drawBuffer = updatedBuffer;
+      _drawVersion++;
     });
   }
 
@@ -379,6 +386,7 @@ class _IconEditorState extends State<IconEditor> {
 
     setState(() {
       _drawBuffer = updatedBuffer;
+      _drawVersion++;
     });
   }
 
@@ -631,6 +639,7 @@ class _IconEditorState extends State<IconEditor> {
                         painter: ImagePainter(
                           image: _drawBuffer ?? _image!,
                           zoom: widget.zoom,
+                          version: _drawVersion,
                         ),
                         size: Size(
                           _image!.width * widget.zoom,
@@ -1035,8 +1044,9 @@ class GridPainter extends CustomPainter {
 class ImagePainter extends CustomPainter {
   final img.Image image;
   final double zoom;
+  final int version;
 
-  ImagePainter({required this.image, required this.zoom});
+  ImagePainter({required this.image, required this.zoom, this.version = 0});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1060,5 +1070,5 @@ class ImagePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(ImagePainter oldDelegate) =>
-      oldDelegate.image != image || oldDelegate.zoom != zoom;
+      oldDelegate.image != image || oldDelegate.zoom != zoom || oldDelegate.version != version;
 }
