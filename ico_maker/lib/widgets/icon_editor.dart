@@ -120,14 +120,14 @@ class _IconEditorState extends State<IconEditor> {
       _lastPosition = position;
       _startPosition = position;
 
-      _drawBuffer ??= img.Image.from(_image!);
-
       // Apply initial action based on the tool
       switch (_currentTool) {
         case EditorTool.pen:
+          _drawBuffer ??= img.Image.from(_image!);
           _drawPixel(x, y, _currentColor);
           break;
         case EditorTool.eraser:
+          _drawBuffer ??= img.Image.from(_image!);
           _drawPixel(x, y, Colors.transparent);
           break;
         case EditorTool.eyeDropper:
@@ -158,10 +158,9 @@ class _IconEditorState extends State<IconEditor> {
     final int x = (position.dx / widget.zoom).floor();
     final int y = (position.dy / widget.zoom).floor();
 
-    _drawBuffer ??= img.Image.from(_image!);
-
     switch (_currentTool) {
       case EditorTool.pen:
+        _drawBuffer ??= img.Image.from(_image!);
         _drawLine(
           (_lastPosition!.dx / widget.zoom).floor(),
           (_lastPosition!.dy / widget.zoom).floor(),
@@ -171,6 +170,7 @@ class _IconEditorState extends State<IconEditor> {
         );
         break;
       case EditorTool.eraser:
+        _drawBuffer ??= img.Image.from(_image!);
         _drawLine(
           (_lastPosition!.dx / widget.zoom).floor(),
           (_lastPosition!.dy / widget.zoom).floor(),
@@ -180,23 +180,11 @@ class _IconEditorState extends State<IconEditor> {
         );
         break;
       case EditorTool.line:
-        // Preview the line
-        _previewLine(
-          (_startPosition!.dx / widget.zoom).floor(),
-          (_startPosition!.dy / widget.zoom).floor(),
-          x,
-          y,
-        );
+        // Preview handled by PreviewPainter
         break;
       case EditorTool.rectangle:
       case EditorTool.filledRectangle:
-        // Preview the rectangle
-        _previewRectangle(
-          (_startPosition!.dx / widget.zoom).floor(),
-          (_startPosition!.dy / widget.zoom).floor(),
-          x,
-          y,
-        );
+        // Preview handled by PreviewPainter
         break;
       case EditorTool.eyeDropper:
         if (x >= 0 && x < _image!.width && y >= 0 && y < _image!.height) {
@@ -325,56 +313,6 @@ class _IconEditorState extends State<IconEditor> {
       y2,
       color,
       thickness: _penSize,
-    );
-
-    setState(() {
-      _drawBuffer = updatedBuffer;
-    });
-  }
-
-  void _previewLine(int x1, int y1, int x2, int y2) {
-    if (_image == null) return;
-
-    // Create a fresh buffer from the original image
-    final previewBuffer = img.Image.from(_image!);
-
-    // Draw the line preview
-    final updatedBuffer = ImageUtils.drawLine(
-      previewBuffer,
-      x1,
-      y1,
-      x2,
-      y2,
-      _currentColor,
-      thickness: _penSize,
-    );
-
-    setState(() {
-      _drawBuffer = updatedBuffer;
-    });
-  }
-
-  void _previewRectangle(int x1, int y1, int x2, int y2) {
-    if (_image == null) return;
-
-    // Create a fresh buffer from the original image
-    final previewBuffer = img.Image.from(_image!);
-
-    // Normalize rectangle coordinates
-    final x = x1 < x2 ? x1 : x2;
-    final y = y1 < y2 ? y1 : y2;
-    final width = (x1 - x2).abs() + 1;
-    final height = (y1 - y2).abs() + 1;
-
-    // Draw the rectangle preview
-    final updatedBuffer = ImageUtils.drawRectangle(
-      previewBuffer,
-      x,
-      y,
-      width,
-      height,
-      _currentColor,
-      filled: _currentTool == EditorTool.filledRectangle,
     );
 
     setState(() {
@@ -632,6 +570,22 @@ class _IconEditorState extends State<IconEditor> {
                           image: _drawBuffer ?? _image!,
                           zoom: widget.zoom,
                         ),
+                        foregroundPainter: (_isDrawing &&
+                                (_currentTool == EditorTool.line ||
+                                    _currentTool == EditorTool.rectangle ||
+                                    _currentTool ==
+                                        EditorTool.filledRectangle))
+                            ? PreviewPainter(
+                                tool: _currentTool,
+                                startPosition: _startPosition,
+                                endPosition: _lastPosition,
+                                color: _currentColor,
+                                penSize: _penSize,
+                                zoom: widget.zoom,
+                                imageWidth: _image!.width,
+                                imageHeight: _image!.height,
+                              )
+                            : null,
                         size: Size(
                           _image!.width * widget.zoom,
                           _image!.height * widget.zoom,
@@ -1061,4 +1015,156 @@ class ImagePainter extends CustomPainter {
   @override
   bool shouldRepaint(ImagePainter oldDelegate) =>
       oldDelegate.image != image || oldDelegate.zoom != zoom;
+}
+
+class PreviewPainter extends CustomPainter {
+  final EditorTool tool;
+  final Offset? startPosition;
+  final Offset? endPosition;
+  final Color color;
+  final int penSize;
+  final double zoom;
+  final int imageWidth;
+  final int imageHeight;
+
+  PreviewPainter({
+    required this.tool,
+    this.startPosition,
+    this.endPosition,
+    required this.color,
+    this.penSize = 1,
+    required this.zoom,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (startPosition == null || endPosition == null) return;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    // Convert to pixel coordinates
+    final int x1 = (startPosition!.dx / zoom).floor();
+    final int y1 = (startPosition!.dy / zoom).floor();
+    final int x2 = (endPosition!.dx / zoom).floor();
+    final int y2 = (endPosition!.dy / zoom).floor();
+
+    if (tool == EditorTool.line) {
+      _drawLine(canvas, x1, y1, x2, y2, paint);
+    } else if (tool == EditorTool.rectangle) {
+      _drawRectangle(canvas, x1, y1, x2, y2, paint, false);
+    } else if (tool == EditorTool.filledRectangle) {
+      _drawRectangle(canvas, x1, y1, x2, y2, paint, true);
+    }
+  }
+
+  // Helper to draw a "pixel"
+  void _drawPixel(Canvas canvas, int x, int y, Paint paint) {
+    if (x < 0 || x >= imageWidth || y < 0 || y >= imageHeight) return;
+    canvas.drawRect(
+      Rect.fromLTWH(x * zoom, y * zoom, zoom, zoom),
+      paint,
+    );
+  }
+
+  void _drawLine(Canvas canvas, int x1, int y1, int x2, int y2, Paint paint) {
+    int dx = (x2 - x1).abs();
+    int dy = (y2 - y1).abs();
+    int sx = x1 < x2 ? 1 : -1;
+    int sy = y1 < y2 ? 1 : -1;
+    int err = dx - dy;
+
+    while (true) {
+      _drawPixel(canvas, x1, y1, paint);
+
+      // Thickness
+      for (int t = 1; t <= penSize ~/ 2; t++) {
+        if (dx > dy) {
+          _drawPixel(canvas, x1, y1 + t, paint);
+          _drawPixel(canvas, x1, y1 - t, paint);
+        } else {
+          _drawPixel(canvas, x1 + t, y1, paint);
+          _drawPixel(canvas, x1 - t, y1, paint);
+        }
+      }
+
+      if (x1 == x2 && y1 == y2) break;
+      int e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x1 += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y1 += sy;
+      }
+    }
+  }
+
+  void _drawRectangle(
+    Canvas canvas,
+    int x1,
+    int y1,
+    int x2,
+    int y2,
+    Paint paint,
+    bool filled,
+  ) {
+    final x = x1 < x2 ? x1 : x2;
+    final y = y1 < y2 ? y1 : y2;
+    final width = (x1 - x2).abs() + 1;
+    final height = (y1 - y2).abs() + 1;
+
+    if (filled) {
+      // Optimization: Draw one big rect
+      // Check bounds
+      int rx = x;
+      int ry = y;
+      int rw = width;
+      int rh = height;
+
+      // Clip to image
+      if (rx < 0) {
+        rw += rx;
+        rx = 0;
+      }
+      if (ry < 0) {
+        rh += ry;
+        ry = 0;
+      }
+      if (rx + rw > imageWidth) rw = imageWidth - rx;
+      if (ry + rh > imageHeight) rh = imageHeight - ry;
+
+      if (rw > 0 && rh > 0) {
+        canvas.drawRect(
+          Rect.fromLTWH(rx * zoom, ry * zoom, rw * zoom, rh * zoom),
+          paint,
+        );
+      }
+    } else {
+      // Draw borders.
+      // Top and Bottom (draws corners)
+      for (int px = x; px < x + width; px++) {
+        _drawPixel(canvas, px, y, paint);
+        _drawPixel(canvas, px, y + height - 1, paint);
+      }
+      // Left and Right (exclude corners to avoid overdraw)
+      for (int py = y + 1; py < y + height - 1; py++) {
+        _drawPixel(canvas, x, py, paint);
+        _drawPixel(canvas, x + width - 1, py, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(PreviewPainter oldDelegate) =>
+      oldDelegate.startPosition != startPosition ||
+      oldDelegate.endPosition != endPosition ||
+      oldDelegate.tool != tool ||
+      oldDelegate.color != color ||
+      oldDelegate.penSize != penSize ||
+      oldDelegate.zoom != zoom;
 }
